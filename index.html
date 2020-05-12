@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>INAV box2perm tool</title>
+
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+    <style>
+        textarea.diff-text-area {
+            overflow-y: scroll;
+            height: 20rem;
+            max-height: 20rem;
+        }
+        .gone {
+            display: none;
+        }
+    </style>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+</head>
+
+<body>
+<div class="container">
+    <h1 class="center-align">
+        box2perm
+    </h1>
+    <div id="pre_convert" class="scale-transition">
+        <div class="row">
+            <div class="col s8 offset-s2">
+                <p>
+                    Enter your INAV 2.0 to 2.4 diff below (output of "<b><code>diff</code></b>" command).
+                </p>
+            </div>
+        </div>
+        <div class="row">
+            <form id="old_diff_form" class="col s8 offset-s2">
+                <div class="row">
+                    <div class="input-field col s12">
+                        <textarea id="old_diff" class="materialize-textarea diff-text-area"></textarea>
+                        <label for="old_diff">Paste your diff here</label>
+                    </div>
+                </div>
+                <div id="submit" class="row center-align scale-transition">
+                    <button class="btn waves-effect waves-light" type="submit">Convert to 2.5+
+                        <i class="material-icons right">autorenew</i>
+                    </button>
+                </div>
+                <div id="loader" class="row center-align scale-transition scale-out">
+                    <div class="preloader-wrapper small active">
+                        <div class="spinner-layer spinner-green-only">
+                            <div class="circle-clipper left">
+                                <div class="circle"></div>
+                            </div><div class="gap-patch">
+                            <div class="circle"></div>
+                        </div><div class="circle-clipper right">
+                            <div class="circle"></div>
+                        </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div id="post_convert" class="scale-transition scale-out gone">
+        <div class="row">
+            <div class="center-align">
+                <h4 class="green-text">
+                    Done!
+                    <i class="material-icons" style="font-size: 1em; vertical-align: bottom">check</i>
+                </h4>
+            </div>
+        </div>
+        <div class="row">
+            <form class="col s8 offset-s2">
+                <div class="row">
+                    <div class="input-field col s12">
+                        <textarea id="new_diff" class="materialize-textarea diff-text-area" readonly></textarea>
+                        <label for="new_diff">INAV 2.5+ compatible modes</label>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script lang="js">
+  const FLAGDAY = 4;
+  const FLAGMON = 5;
+
+  const monStrings = {
+    "Jan": 1,
+    "Feb": 2,
+    "Mar": 3,
+    "Apr": 4,
+    "May": 5,
+    "Jun": 6,
+    "Jul": 7,
+    "Aug": 8,
+    "Sep": 9,
+    "Oct": 10,
+    "Nov": 11,
+    "Dec": 12
+  };
+
+  const box2perm = [
+    { permid: 0, name: "ARM" },		// 0
+    { permid: 1, name: "ANGLE" },		// 1
+    { permid: 2, name: "HORIZON" },		// 2
+    { permid: 3, name: "NAV ALTHOLD" },		// 3
+    { permid: 5, name: "HEADING HOLD" },		// 4
+    { permid: 6, name: "HEADFREE" },		// 5
+    { permid: 7, name: "HEADADJ" },		// 6
+    { permid: 8, name: "CAMSTAB" },		// 7
+    { permid: 10, name: "NAV RTH" },		// 8
+    { permid: 11, name: "NAV POSHOLD" },		// 9
+    { permid: 12, name: "MANUAL" },		// 10
+    { permid: 13, name: "BEEPER" },		// 11
+    { permid: 15, name: "LEDLOW" },		// 12
+    { permid: 16, name: "LIGHTS" },		// 13
+    { permid: 36, name: "NAV LAUNCH" },		// 14
+    { permid: 19, name: "OSD SW" },		// 15
+    { permid: 20, name: "TELEMETRY" },		// 16
+    { permid: 26, name: "BLACKBOX" },		// 17
+    { permid: 27, name: "FAILSAFE" },		// 18
+    { permid: 28, name: "NAV WP" },		// 19
+    { permid: 29, name: "AIR MODE" },		// 20
+    { permid: 30, name: "HOME RESET" },		// 21
+    { permid: 31, name: "GCS NAV" },		// 22
+    { permid: 38, name: "KILLSWITCH" },		// 23
+    { permid: 33, name: "SURFACE" },		// 24
+    { permid: 34, name: "FLAPERON" },		// 25
+    { permid: 35, name: "TURN ASSIST" },		// 26
+    { permid: 37, name: "SERVO AUTOTRIM" },		// 27
+    { permid: 21, name: "AUTO TUNE" },		// 28
+    { permid: 39, name: "CAMERA CONTROL 1" },		// 29
+    { permid: 40, name: "CAMERA CONTROL 2" },		// 30
+    { permid: 41, name: "CAMERA CONTROL 3" },		// 31
+    { permid: 42, name: "OSD ALT 1" },		// 32
+    { permid: 43, name: "OSD ALT 2" },		// 33
+    { permid: 44, name: "OSD ALT 3" },		// 34
+    { permid: 45, name: "NAV CRUISE" },		// 35
+    { permid: 46, name: "MC BRAKING" },		// 36
+    { permid: 47, name: "USER1" },		// 37
+    { permid: 48, name: "USER2" },		// 38
+    { permid: 32, name: "FPV ANGLE MIX" },		// 39
+    { permid: 49, name: "LOITER CHANGE" },		// 40
+    { permid: 50, name: "MSP RC OVERRIDE" },		// 41
+  ];
+
+  function isConversionNeeded(oldDiffText) {
+    const versionRegexp = /^# INAV\/\S+\s+(\d+)\.(\d+)\.\d+\s+(\S+)\s+(\d+)\s+\d+ /m;
+    const versionData = versionRegexp.exec(oldDiffText);
+    const major = parseInt(versionData[1]),
+      minor = parseInt(versionData[2]),
+      mon = monStrings[versionData[3]],
+      day = parseInt(versionData[4]);
+
+    return (major === 2 && (minor < 5 || (minor === 5 && (mon < FLAGMON || (mon === FLAGMON && day < FLAGDAY)))));
+  }
+
+  function convert(oldDiffText) {
+    const buff = [];
+    for (let line of oldDiffText.split("\n")) {
+      if (line.startsWith("aux ")) {
+        const parts = line.split(" ");
+        const boxId = parseInt(parts[2]);
+        if (boxId > box2perm.length) {
+          console.error(`Invalid ID ${boxId} at \"${line}\", no conversion performed`);
+          // TODO: alert?
+        }
+        // only updates lines with 'set' values
+        if (parts[4] !== "900" && parts[5] !== "900") {
+          const p = box2perm[boxId];
+          line = `aux ${parts[1]} ${p.permid} ${parts[3]} ${parts[4]} ${parts[5]}\t\t# ${boxId} => ${p.permid} (${p.name})`
+        }
+      }
+      buff.push(line);
+    }
+
+    buff.push(`### inav 2.5 aux conversion by box2perm ${new Date().toISOString()} ###\n`)
+    return buff.join("\n");
+  }
+
+  (function () {
+    M.AutoInit();
+
+    document.getElementById("old_diff_form").addEventListener("submit", function (evt) {
+      evt.preventDefault();
+      const oldDiffText = document.getElementById("old_diff").value;
+
+      // Check if conversion is needed
+      if (!isConversionNeeded(oldDiffText)) {
+        alert("No conversion needed!");
+        return false;
+      }
+
+      // Animate transitions
+      document.getElementById("submit").classList.add("scale-out");
+      setTimeout(() => {
+        document.getElementById("submit").classList.add("gone");
+        document.getElementById("loader").classList.add("scale-in");
+      }, 200);
+
+      // Convert the diff
+      const new_diff = document.getElementById("new_diff");
+      new_diff.value = convert(document.getElementById("old_diff").value);
+
+      // Animate transitions & fix UI
+      document.getElementById("pre_convert").classList.add("scale-out");
+      setTimeout(() => {
+        document.getElementById("pre_convert").classList.add("gone");
+        document.getElementById("post_convert").classList.remove("gone");
+        document.getElementById("post_convert").classList.add("scale-in");
+        M.updateTextFields();
+        M.textareaAutoResize(new_diff);
+      }, 200);
+    });
+  })();
+</script>
+</body>
+
+</html>
