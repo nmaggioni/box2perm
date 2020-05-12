@@ -152,6 +152,10 @@
 
   function isConversionNeeded(oldDiffText) {
     const versionRegexp = /^# INAV\/\S+\s+(\d+)\.(\d+)\.\d+\s+(\S+)\s+(\d+)\s+\d+ /m;
+    const alreadyConvertedRegex = /^### inav 2\.5 aux conversion by box2perm [0-9\-T:.Z]+ ###/m;
+    if (alreadyConvertedRegex.test(oldDiffText)) {
+      return false;
+    }
     const versionData = versionRegexp.exec(oldDiffText);
     const major = parseInt(versionData[1]),
       minor = parseInt(versionData[2]),
@@ -163,21 +167,26 @@
 
   function convert(oldDiffText) {
     const buff = [];
+    let foundErr = false;
     for (let line of oldDiffText.split("\n")) {
       if (line.startsWith("aux ")) {
         const parts = line.split(" ");
         const boxId = parseInt(parts[2]);
         if (boxId > box2perm.length) {
+          foundErr = true;
           console.error(`Invalid ID ${boxId} at \"${line}\", no conversion performed`);
-          // TODO: alert?
-        }
-        // only updates lines with 'set' values
-        if (parts[4] !== "900" || parts[5] !== "900") {
-          const p = box2perm[boxId];
-          line = `aux ${parts[1]} ${p.permid} ${parts[3]} ${parts[4]} ${parts[5]}\t\t# ${boxId.toString().padStart(2, " ")} => ${p.permid.toString().padStart(2, " ")} (${p.name})`
+        } else {
+          // only updates lines with 'set' values
+          if (parts[4] !== "900" || parts[5] !== "900") {
+            const p = box2perm[boxId];
+            line = `aux ${parts[1]} ${p.permid} ${parts[3]} ${parts[4]} ${parts[5]}\t\t# ${boxId.toString().padStart(2, " ")} => ${p.permid.toString().padStart(2, " ")} (${p.name})`
+          }
         }
       }
       buff.push(line);
+    }
+    if (foundErr) {
+      alert(`Unable to convert some lines, has your diff already been updated?`);
     }
 
     buff.push(`### inav 2.5 aux conversion by box2perm ${new Date().toISOString()} ###\n`)
@@ -193,7 +202,7 @@
 
       // Check if conversion is needed
       if (!isConversionNeeded(oldDiffText)) {
-        alert("No conversion needed!");
+        alert("No conversion needed! Your INAV build is newer than 2.4 or this diff has already been patched.");
         return false;
       }
 
