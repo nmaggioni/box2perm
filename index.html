@@ -172,9 +172,9 @@
           // TODO: alert?
         }
         // only updates lines with 'set' values
-        if (parts[4] !== "900" && parts[5] !== "900") {
+        if (parts[4] !== "900" || parts[5] !== "900") {
           const p = box2perm[boxId];
-          line = `aux ${parts[1]} ${p.permid} ${parts[3]} ${parts[4]} ${parts[5]}\t\t# ${boxId} => ${p.permid} (${p.name})`
+          line = `aux ${parts[1]} ${p.permid} ${parts[3]} ${parts[4]} ${parts[5]}\t\t# ${boxId.toString().padStart(2, " ")} => ${p.permid.toString().padStart(2, " ")} (${p.name})`
         }
       }
       buff.push(line);
