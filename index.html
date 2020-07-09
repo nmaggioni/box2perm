@@ -157,6 +157,9 @@
       return false;
     }
     const versionData = versionRegexp.exec(oldDiffText);
+    if (!versionData) {
+      throw new Error("NoVersionHeader");
+    }
     const major = parseInt(versionData[1]),
       minor = parseInt(versionData[2]),
       mon = monStrings[versionData[3]],
@@ -201,9 +204,17 @@
       const oldDiffText = document.getElementById("old_diff").value;
 
       // Check if conversion is needed
-      if (!isConversionNeeded(oldDiffText)) {
-        alert("No conversion needed! Your INAV build is newer than 2.4 or this diff has already been patched.");
-        return false;
+      try {
+        if (!isConversionNeeded(oldDiffText)) {
+          alert("No conversion needed! Your INAV build is newer than 2.4 or this diff has already been patched.");
+          return false;
+        }
+      } catch (e) {
+        if (e.message === "NoVersionHeader") {
+          alert("No version string found, did you paste in your complete diff?");
+          return false;
+        }
+        throw e;
       }
 
       // Animate transitions
